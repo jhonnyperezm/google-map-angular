@@ -1,15 +1,18 @@
-import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
+import {ChangeDetectionStrategy, Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {GoogleMap, MapInfoWindow, MapMarker} from '@angular/google-maps';
+import {of} from 'rxjs';
+import {filter, tap, map} from 'rxjs/operators';
+import {MarkerInterface} from './Marker.interface';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+  styleUrls: ['./app.component.css'],
+  changeDetection: ChangeDetectionStrategy.Default
 })
 export class AppComponent implements OnInit {
   @ViewChild(GoogleMap, {static: false}) map: GoogleMap;
   @ViewChild(MapInfoWindow, {static: false}) info: MapInfoWindow;
-  @ViewChild('mapa') mapa: ElementRef;
   @ViewChild('elemP') elemP: ElementRef;
   @ViewChild('googleMapa') googleMapa: any;
 
@@ -19,11 +22,11 @@ export class AppComponent implements OnInit {
     zoomControl: false,
     scrollwheel: false,
     disableDoubleClickZoom: true,
-    mapTypeId: 'hybrid',
+    mapTypeId: 'roadmap',
     maxZoom: 15,
     minZoom: 8,
   };
-  markers = [];
+  markers: MarkerInterface [] = [];
   infoContent = '';
 
   ngOnInit() {
@@ -33,12 +36,14 @@ export class AppComponent implements OnInit {
         lng: position.coords.longitude,
       };
     });
+
   }
 
   zoomIn() {
     if (this.zoom < this.options.maxZoom) {
       this.zoom++;
     }
+    console.log(this.map['_mapEl']);
   }
 
   zoomOut() {
@@ -71,6 +76,8 @@ export class AppComponent implements OnInit {
         animation: google.maps.Animation.BOUNCE,
       },
     });
+    this.markers.map(x => Object.assign(x,{}));
+    console.log(JSON.stringify(this.markers));
   }
 
   openInfo(marker: MapMarker, content) {
@@ -79,17 +86,20 @@ export class AppComponent implements OnInit {
   }
 
   busqueda(event) {
+    //Puede utlizar esta forma
     console.log(this.googleMapa._mapEl);
+    // o esta, esta esta tipada directamente algunas propiedades toca acceder asi
+    console.log(this.map['_mapEl']);
+
     const map = new google.maps.Map(
-      this.googleMapa._mapEl,
+      this.map['_mapEl'],
       {
-        center: { lat: -33.8688, lng: 151.2195 },
+        center: this.center,
         zoom: 13,
         mapTypeId: "roadmap"
       }
     );
 
-    const input = document.getElementById("pac-input") as HTMLInputElement;
     const searchBox = new google.maps.places.SearchBox(this.elemP.nativeElement);
     map.controls[google.maps.ControlPosition.TOP_LEFT].push(this.elemP.nativeElement);
 
@@ -112,7 +122,7 @@ export class AppComponent implements OnInit {
       markers.forEach(marker => {
         marker.setMap(null);
       });
-      markers = [];
+      this.markers = [];
 
       // For each place, get the icon, name and location.
       const bounds = new google.maps.LatLngBounds();
